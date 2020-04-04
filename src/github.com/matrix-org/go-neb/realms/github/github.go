@@ -2,6 +2,7 @@
 package github
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -9,11 +10,11 @@ import (
 	"net/http"
 	"net/url"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/google/go-github/github"
 	"github.com/matrix-org/go-neb/database"
 	"github.com/matrix-org/go-neb/services/github/client"
 	"github.com/matrix-org/go-neb/types"
+	log "github.com/sirupsen/logrus"
 )
 
 // RealmType of the Github Realm
@@ -86,7 +87,7 @@ func (s *Session) Info() interface{} {
 	}
 	for {
 		// query for a list of possible projects
-		rs, resp, err := cli.Repositories.List("", opts)
+		rs, resp, err := cli.Repositories.List(context.Background(), "", opts)
 		if err != nil {
 			logger.WithError(err).Print("Failed to query github projects on github.com")
 			return nil

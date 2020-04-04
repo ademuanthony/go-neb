@@ -5,6 +5,7 @@
 package github
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"regexp"
@@ -12,7 +13,8 @@ import (
 	"strings"
 
 	"bytes"
-	log "github.com/Sirupsen/logrus"
+	"html"
+
 	gogithub "github.com/google/go-github/github"
 	"github.com/matrix-org/go-neb/database"
 	"github.com/matrix-org/go-neb/matrix"
@@ -20,7 +22,7 @@ import (
 	"github.com/matrix-org/go-neb/services/github/client"
 	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
-	"html"
+	log "github.com/sirupsen/logrus"
 )
 
 // ServiceType of the Github service
@@ -98,7 +100,7 @@ func (s *Service) cmdGithubSearch(roomID, userID string, args []string) (interfa
 	}
 
 	query := strings.Join(args, " ")
-	searchResult, res, err := cli.Search.Issues(query, nil)
+	searchResult, res, err := cli.Search.Issues(context.Background(), query, nil)
 
 	if err != nil {
 		log.WithField("err", err).Print("Failed to search")
@@ -187,7 +189,7 @@ func (s *Service) cmdGithubCreate(roomID, userID string, args []string) (interfa
 		title = &joinedTitle
 	}
 
-	issue, res, err := cli.Issues.Create(ownerRepoGroups[1], ownerRepoGroups[2], &gogithub.IssueRequest{
+	issue, res, err := cli.Issues.Create(context.Background(), ownerRepoGroups[1], ownerRepoGroups[2], &gogithub.IssueRequest{
 		Title: title,
 		Body:  desc,
 	})
@@ -255,7 +257,7 @@ func (s *Service) cmdGithubReact(roomID, userID string, args []string) (interfac
 		return resp, nil
 	}
 
-	_, res, err := cli.Reactions.CreateIssueReaction(owner, repo, issueNum, reaction)
+	_, res, err := cli.Reactions.CreateIssueReaction(context.Background(), owner, repo, issueNum, reaction)
 
 	if err != nil {
 		log.WithField("err", err).Print("Failed to react to issue")
@@ -294,7 +296,7 @@ func (s *Service) cmdGithubComment(roomID, userID string, args []string) (interf
 		comment = &joinedComment
 	}
 
-	issueComment, res, err := cli.Issues.CreateComment(owner, repo, issueNum, &gogithub.IssueComment{
+	issueComment, res, err := cli.Issues.CreateComment(context.Background(), owner, repo, issueNum, &gogithub.IssueComment{
 		Body: comment,
 	})
 
@@ -328,7 +330,7 @@ func (s *Service) cmdGithubAssign(roomID, userID string, args []string) (interfa
 		return resp, nil
 	}
 
-	issue, res, err := cli.Issues.AddAssignees(owner, repo, issueNum, args[1:])
+	issue, res, err := cli.Issues.AddAssignees(context.Background(), owner, repo, issueNum, args[1:])
 
 	if err != nil {
 		log.WithField("err", err).Print("Failed to add issue assignees")
@@ -356,7 +358,7 @@ func (s *Service) githubIssueCloseReopen(roomID, userID string, args []string, s
 		return resp, nil
 	}
 
-	issueComment, res, err := cli.Issues.Edit(owner, repo, issueNum, &gogithub.IssueRequest{
+	issueComment, res, err := cli.Issues.Edit(context.Background(), owner, repo, issueNum, &gogithub.IssueRequest{
 		State: &state,
 	})
 
@@ -427,7 +429,7 @@ func (s *Service) getIssueDetailsFor(input, roomID, usage string) (owner, repo s
 func (s *Service) expandIssue(roomID, userID, owner, repo string, issueNum int) interface{} {
 	cli := s.githubClientFor(userID, true)
 
-	i, _, err := cli.Issues.Get(owner, repo, issueNum)
+	i, _, err := cli.Issues.Get(context.Background(), owner, repo, issueNum)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{
 			"owner":  owner,
@@ -446,12 +448,12 @@ func (s *Service) expandIssue(roomID, userID, owner, repo string, issueNum int) 
 func (s *Service) expandCommit(roomID, userID, owner, repo, sha string) interface{} {
 	cli := s.githubClientFor(userID, true)
 
-	c, _, err := cli.Repositories.GetCommit(owner, repo, sha)
+	c, _, err := cli.Repositories.GetCommit(context.Background(), owner, repo, sha)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{
 			"owner": owner,
-			"repo": repo,
-			"sha": sha,
+			"repo":  repo,
+			"sha":   sha,
 		}).Print("Failed to fetch commit")
 		return nil
 	}

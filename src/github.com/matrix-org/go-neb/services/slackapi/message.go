@@ -12,9 +12,9 @@ import (
 	"regexp"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/matrix-org/gomatrix"
 	"github.com/russross/blackfriday"
+	log "github.com/sirupsen/logrus"
 )
 
 type slackAttachment struct {
@@ -190,7 +190,7 @@ func renderSlackAttachment(attachment *slackAttachment) {
 
 		if targetField != nil && srcField != nil {
 			*targetField = template.HTML(
-				blackfriday.MarkdownBasic([]byte(linkifyString(*srcField))))
+				blackfriday.Run([]byte(linkifyString(*srcField))))
 		}
 	}
 }
@@ -198,7 +198,7 @@ func renderSlackAttachment(attachment *slackAttachment) {
 func slackMessageToHTMLMessage(message slackMessage) (html gomatrix.HTMLMessage, err error) {
 	text := linkifyString(message.Text)
 	if message.Mrkdwn == nil || *message.Mrkdwn == true {
-		message.TextRendered = template.HTML(blackfriday.MarkdownBasic([]byte(text)))
+		message.TextRendered = template.HTML(blackfriday.Run([]byte(text)))
 	}
 
 	for attachmentID := range message.Attachments {

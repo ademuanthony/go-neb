@@ -7,9 +7,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/matrix-org/dugong"
 	"github.com/matrix-org/go-neb/api"
 	"github.com/matrix-org/go-neb/api/handlers"
@@ -35,6 +33,8 @@ import (
 	"github.com/matrix-org/util"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -178,12 +178,12 @@ func setup(e envVars, mux *http.ServeMux, matrixClient *http.Client) {
 	}
 
 	// Handle non-admin paths for normal NEB functioning
-	mux.Handle("/metrics", prometheus.Handler())
-	mux.Handle("/test", prometheus.InstrumentHandler("test", util.MakeJSONAPI(&handlers.Heartbeat{})))
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/test", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.MakeJSONAPI(&handlers.Heartbeat{})))
 	wh := handlers.NewWebhook(db, matrixClients)
-	mux.HandleFunc("/services/hooks/", prometheus.InstrumentHandlerFunc("webhookHandler", util.Protect(wh.Handle)))
+	mux.Handle("/services/hooks/", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.Protect(wh.Handle)))
 	rh := &handlers.RealmRedirect{db}
-	mux.HandleFunc("/realms/redirects/", prometheus.InstrumentHandlerFunc("realmRedirectHandler", util.Protect(rh.Handle)))
+	mux.Handle("/realms/redirects/", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.Protect(rh.Handle)))
 
 	// Read exclusively from the config file if one was supplied.
 	// Otherwise, add HTTP listeners for new Services/Sessions/Clients/etc.
@@ -194,13 +194,13 @@ func setup(e envVars, mux *http.ServeMux, matrixClient *http.Client) {
 
 		log.Info("Inserted ", len(cfg.Services), " services")
 	} else {
-		mux.Handle("/admin/getService", prometheus.InstrumentHandler("getService", util.MakeJSONAPI(&handlers.GetService{db})))
-		mux.Handle("/admin/getSession", prometheus.InstrumentHandler("getSession", util.MakeJSONAPI(&handlers.GetSession{db})))
-		mux.Handle("/admin/configureClient", prometheus.InstrumentHandler("configureClient", util.MakeJSONAPI(&handlers.ConfigureClient{matrixClients})))
-		mux.Handle("/admin/configureService", prometheus.InstrumentHandler("configureService", util.MakeJSONAPI(handlers.NewConfigureService(db, matrixClients))))
-		mux.Handle("/admin/configureAuthRealm", prometheus.InstrumentHandler("configureAuthRealm", util.MakeJSONAPI(&handlers.ConfigureAuthRealm{db})))
-		mux.Handle("/admin/requestAuthSession", prometheus.InstrumentHandler("requestAuthSession", util.MakeJSONAPI(&handlers.RequestAuthSession{db})))
-		mux.Handle("/admin/removeAuthSession", prometheus.InstrumentHandler("removeAuthSession", util.MakeJSONAPI(&handlers.RemoveAuthSession{db})))
+		mux.Handle("/admin/getService", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.MakeJSONAPI(&handlers.GetService{db})))
+		mux.Handle("/admin/getSession", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.MakeJSONAPI(&handlers.GetSession{db})))
+		mux.Handle("/admin/configureClient", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.MakeJSONAPI(&handlers.ConfigureClient{matrixClients})))
+		mux.Handle("/admin/configureService", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.MakeJSONAPI(handlers.NewConfigureService(db, matrixClients))))
+		mux.Handle("/admin/configureAuthRealm", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.MakeJSONAPI(&handlers.ConfigureAuthRealm{db})))
+		mux.Handle("/admin/requestAuthSession", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.MakeJSONAPI(&handlers.RequestAuthSession{db})))
+		mux.Handle("/admin/removeAuthSession", promhttp.InstrumentMetricHandler(prometheus.DefaultRegisterer, util.MakeJSONAPI(&handlers.RemoveAuthSession{db})))
 	}
 	polling.SetClients(matrixClients)
 	if err := polling.Start(); err != nil {
@@ -229,9 +229,7 @@ func main() {
 
 	if e.LogDir != "" {
 		log.AddHook(dugong.NewFSHook(
-			filepath.Join(e.LogDir, "info.log"),
-			filepath.Join(e.LogDir, "warn.log"),
-			filepath.Join(e.LogDir, "error.log"),
+			e.LogDir,
 			&log.TextFormatter{
 				TimestampFormat:  "2006-01-02 15:04:05.000000",
 				DisableColors:    true,

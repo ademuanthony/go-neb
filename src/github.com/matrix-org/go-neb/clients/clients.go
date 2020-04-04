@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/matrix-org/go-neb/api"
 	"github.com/matrix-org/go-neb/database"
 	"github.com/matrix-org/go-neb/matrix"
@@ -16,6 +15,7 @@ import (
 	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
 	shellwords "github.com/mattn/go-shellwords"
+	log "github.com/sirupsen/logrus"
 )
 
 // A Clients is a collection of clients used for bot services.
@@ -278,7 +278,11 @@ func runExpansionsForService(expans []types.Expansion, event *gomatrix.Event, bo
 func (c *Clients) onBotOptionsEvent(client *gomatrix.Client, event *gomatrix.Event) {
 	// see if these options are for us. The state key is the user ID with a leading _
 	// to get around restrictions in the HS about having user IDs as state keys.
-	targetUserID := strings.TrimPrefix(event.StateKey, "_")
+	var stateKey string
+	if event.StateKey != nil {
+		stateKey = *event.StateKey
+	}
+	targetUserID := strings.TrimPrefix(stateKey, "_")
 	if targetUserID != client.UserID {
 		return
 	}
@@ -300,7 +304,11 @@ func (c *Clients) onBotOptionsEvent(client *gomatrix.Client, event *gomatrix.Eve
 }
 
 func (c *Clients) onRoomMemberEvent(client *gomatrix.Client, event *gomatrix.Event) {
-	if event.StateKey != client.UserID {
+	var stateKey string
+	if event.StateKey != nil {
+		stateKey = *event.StateKey
+	}
+	if stateKey != client.UserID {
 		return // not our member event
 	}
 	m := event.Content["membership"]

@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	gojira "github.com/andygrunwald/go-jira"
 	"github.com/matrix-org/go-neb/database"
 	"github.com/matrix-org/go-neb/matrix"
@@ -21,6 +20,7 @@ import (
 	"github.com/matrix-org/go-neb/services/jira/webhook"
 	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
+	log "github.com/sirupsen/logrus"
 )
 
 // ServiceType of the JIRA Service
@@ -216,7 +216,8 @@ func (s *Service) expandIssue(roomID, userID string, issueKeyGroups []string) in
 		return nil
 	}
 
-	issue, _, err := cli.Issue.Get(issueKey)
+	issue, _, err := cli.Issue.Get(issueKey, &gojira.GetQueryOptions{
+	})
 	if err != nil {
 		logger.WithError(err).Print("Failed to GET issue")
 		return err

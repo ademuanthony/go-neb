@@ -1,18 +1,19 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sort"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
 	gogithub "github.com/google/go-github/github"
 	"github.com/matrix-org/go-neb/database"
 	"github.com/matrix-org/go-neb/services/github/client"
 	"github.com/matrix-org/go-neb/services/github/webhook"
 	"github.com/matrix-org/go-neb/types"
 	"github.com/matrix-org/gomatrix"
+	log "github.com/sirupsen/logrus"
 )
 
 // WebhookServiceType of the Github Webhook service.
@@ -300,7 +301,7 @@ func (s *WebhookService) createHook(cli *gogithub.Client, ownerRepo string) erro
 		cfg["secret"] = s.SecretToken
 	}
 	events := []string{"push", "pull_request", "issues", "issue_comment", "pull_request_review_comment"}
-	_, res, err := cli.Repositories.CreateHook(owner, repo, &gogithub.Hook{
+	_, res, err := cli.Repositories.CreateHook(context.Background(), owner, repo, &gogithub.Hook{
 		Name:   &name,
 		Config: cfg,
 		Events: events,
@@ -338,7 +339,7 @@ func (s *WebhookService) deleteHook(owner, repo string) error {
 
 	// Get a list of webhooks for this owner/repo and find the one which has the
 	// same endpoint URL which is what github uses to determine equivalence.
-	hooks, _, err := cli.Repositories.ListHooks(owner, repo, nil)
+	hooks, _, err := cli.Repositories.ListHooks(context.Background(), owner, repo, nil)
 	if err != nil {
 		return err
 	}
@@ -362,7 +363,7 @@ func (s *WebhookService) deleteHook(owner, repo string) error {
 		return fmt.Errorf("Failed to find hook with endpoint: %s", s.webhookEndpointURL)
 	}
 
-	_, err = cli.Repositories.DeleteHook(owner, repo, *hook.ID)
+	_, err = cli.Repositories.DeleteHook(context.Background(), owner, repo, *hook.ID)
 	return err
 }
 

@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/die-net/lrucache"
 	"github.com/gregjones/httpcache"
 	"github.com/matrix-org/go-neb/database"
@@ -18,6 +17,7 @@ import (
 	"github.com/matrix-org/gomatrix"
 	"github.com/mmcdole/gofeed"
 	"github.com/prometheus/client_golang/prometheus"
+	log "github.com/sirupsen/logrus"
 )
 
 // ServiceType of the RSS Bot service
@@ -353,13 +353,13 @@ func itemToHTML(feed *gofeed.Feed, item gofeed.Item) gomatrix.HTMLMessage {
 		Body: fmt.Sprintf("%s: %s ( %s )",
 			html.EscapeString(feed.Title), html.EscapeString(item.Title), html.EscapeString(item.Link)),
 		MsgType: "m.notice",
-		Format: "org.matrix.custom.html",
+		Format:  "org.matrix.custom.html",
 		FormattedBody: fmt.Sprintf("<strong>%s</strong>:<br><a href=\"%s\"><strong>%s</strong></a>",
 			html.EscapeString(feed.Title), html.EscapeString(item.Link), html.EscapeString(item.Title)),
-			// <strong>FeedTitle</strong>:
-			// <br>
-			// <a href="url-of-the-entry"><strong>Title of the Entry</strong></a>
-	  }
+		// <strong>FeedTitle</strong>:
+		// <br>
+		// <a href="url-of-the-entry"><strong>Title of the Entry</strong></a>
+	}
 }
 
 func ensureItemsHaveGUIDs(feed *gofeed.Feed) {
